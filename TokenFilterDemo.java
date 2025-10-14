@@ -7,6 +7,11 @@ import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.es.SpanishAnalyzer; // incluye el conjunto de palabras vacías en español
 import org.apache.lucene.analysis.snowball.SnowballFilter;
 import org.apache.lucene.analysis.shingle.ShingleFilter;
+import org.apache.lucene.analysis.ngram.EdgeNGramTokenFilter;
+import org.apache.lucene.analysis.ngram.NGramTokenFilter;
+import org.apache.lucene.analysis.commongrams.CommonGramsFilter;
+import org.apache.lucene.analysis.synonym.SynonymGraphFilter;
+import org.apache.lucene.analysis.synonym.SynonymMap;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
 
@@ -24,7 +29,7 @@ import java.util.Arrays;
 
 public class TokenFilterDemo {
     
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException  {
         // Texto de ejemplo para analizar (contenido de emails.txt)
         String texto = "**De:** María López <maria.lopez92@gmail.com>\n" +
                       "**Para:** Luis Ortega <luis.ortega@outlook.com>\n" +
@@ -66,7 +71,36 @@ public class TokenFilterDemo {
         System.out.println("\n5. CON SHINGLEFILTER (2-gramas):");
         StandardTokenizer tokenizer5 = new StandardTokenizer();
         analizarTexto(texto, tokenizer5, new ShingleFilter(tokenizer5, 2));
-        
+	
+	// Con EdgeNGramTokenFilter (prefijos): Genera subtokens con los primeros caracteres
+	System.out.println("\n6. CON EdgeNGramTokenFilter (prefijos):");
+        StandardTokenizer tokenizerEdge = new StandardTokenizer();
+        EdgeNGramTokenFilter edgeNGramFilter = new EdgeNGramTokenFilter(tokenizerEdge, 1, 4,false);// tamano minimo 1, tamano maximo 4
+        analizarTexto(texto, tokenizerEdge, edgeNGramFilter);
+
+        // Con NGramTokenFilter (n-gramas internos): Genera todas las combinaciones posibles de subcadenas consecutivas
+        System.out.println("\n7. CON NGramTokenFilter (n-gramas internos):");
+        StandardTokenizer tokenizerNGram = new StandardTokenizer();
+        NGramTokenFilter nGramFilter = new NGramTokenFilter(tokenizerNGram, 2, 3,false);// tamano minimo 2, tamano maximo 3
+        analizarTexto(texto, tokenizerNGram, nGramFilter);
+
+        // Con CommonGramsFilter (palabras comunes): Genera tokens compuestos("de acuerdo")
+        System.out.println("\n8. CON CommonGramsFilter (palabras comunes):");
+        StandardTokenizer tokenizerCommon = new StandardTokenizer();
+        CommonGramsFilter commonGramsFilter = new CommonGramsFilter(tokenizerCommon, stopWords);
+        analizarTexto(texto, tokenizerCommon, commonGramsFilter);
+
+        // Con SynonymFilter: Anade sinonimos
+	System.out.println("\n9. CON SynonymFilter: Anade sinonimos:");
+        SynonymMap.Builder builder = new SynonymMap.Builder(true);
+        builder.add(new org.apache.lucene.util.CharsRef("proyecto"), new org.apache.lucene.util.CharsRef("plan"), true);
+        SynonymMap synMap = builder.build();
+        StandardTokenizer tokenizerSyn = new StandardTokenizer();
+        SynonymGraphFilter synFilter = new SynonymGraphFilter(tokenizerSyn, synMap, true);//estructura de grafo, mejor para frases largas
+        analizarTexto(texto, tokenizerSyn, synFilter);
+ 
+
+       
         System.out.println("\n=== ANÁLISIS COMPLETADO ===");
         
     }
