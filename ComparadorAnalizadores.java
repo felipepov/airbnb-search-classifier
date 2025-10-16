@@ -1,26 +1,10 @@
 import org.apache.lucene.analysis.*;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
-import org.apache.lucene.analysis.es.SpanishAnalyzer;
-import org.apache.lucene.analysis.en.EnglishAnalyzer;
-import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
-import org.apache.lucene.analysis.core.SimpleAnalyzer;
 import org.apache.lucene.analysis.core.KeywordAnalyzer;
-import org.apache.lucene.analysis.snowball.SnowballAnalyzer;
-import org.apache.lucene.analysis.morfologik.MorfologikAnalyzer;
-import org.apache.lucene.analysis.ngram.EdgeNGramTokenFilter;
-import org.apache.lucene.analysis.ngram.NGramTokenFilter;
-import org.apache.lucene.analysis.shingle.ShingleFilter;
-import org.apache.lucene.analysis.core.LowerCaseFilter;
-import org.apache.lucene.analysis.core.StopFilter;
-import org.apache.lucene.analysis.standard.StandardTokenizer;
-import org.apache.lucene.analysis.CharArraySet;
-import org.apache.lucene.analysis.es.SpanishAnalyzer;
+import org.apache.lucene.analysis.en.EnglishAnalyzer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
-import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
 import org.apache.lucene.search.suggest.Lookup;
 import org.apache.lucene.search.suggest.analyzing.AnalyzingSuggester;
-import org.apache.lucene.search.suggest.analyzing.FuzzySuggester;
-import org.apache.lucene.search.suggest.analyzing.AnalyzingInfixSuggester;
 import org.apache.lucene.search.suggest.InputIterator;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.store.Directory;
@@ -28,6 +12,13 @@ import org.apache.lucene.store.RAMDirectory;
 
 import java.io.*;
 import java.util.*;
+
+//Compilar el programa Java
+// javac -cp "lucene-10.3.1/modules/lucene-core-10.3.1.jar:lucene-10.3.1/modules/lucene-analysis-common-10.3.1.jar:lucene-10.3.1/modules/lucene-suggest-10.3.1.jar" ComparadorAnalizadores.java
+
+// Ejecutar el programa
+//  java -cp ".:lucene-10.3.1/modules/lucene-core-10.3.1.jar:lucene-10.3.1/modules/lucene-analysis-common-10.3.1.jar:lucene-10.3.1/modules/lucene-suggest-10.3.1.jar" ComparadorAnalizadores
+
 
 /**
  * Comparador de Analizadores de Lucene para Airbnb Listings
@@ -117,59 +108,35 @@ public class ComparadorAnalizadores {
     }
     
     /**
-     * Compara diferentes analizadores
+     * Compara diferentes analizadores aplicados a AMBOS campos
      */
     private static void compararAnalizadores(List<String[]> samples) throws IOException {
         
-        // 1. ANALIZADOR ESTÁNDAR (baseline)
-        System.out.println("1. ANALIZADOR ESTÁNDAR (Baseline)");
-        System.out.println("=====================================");
-        analizarConAnalizador(samples, new StandardAnalyzer(), "StandardAnalyzer");
-        
-        // 2. ANALIZADOR INGLÉS (para contenido en inglés - más apropiado)
-        System.out.println("\n2. ANALIZADOR INGLÉS");
+        // 1. KEYWORD ANALYZER
+        System.out.println("1. KEYWORD ANALYZER");
         System.out.println("===================");
-        analizarConAnalizador(samples, new EnglishAnalyzer(), "EnglishAnalyzer");
-        
-        // 3. ANALIZADOR SIMPLE (para nombres propios y términos técnicos)
-        System.out.println("\n3. ANALIZADOR SIMPLE");
-        System.out.println("===================");
-        analizarConAnalizador(samples, new SimpleAnalyzer(), "SimpleAnalyzer");
-        
-        // 4. ANALIZADOR CON STEMMING (Snowball - Inglés)
-        System.out.println("\n4. ANALIZADOR CON STEMMING (Snowball - Inglés)");
-        System.out.println("=============================================");
-        analizarConAnalizador(samples, new SnowballAnalyzer("English"), "SnowballAnalyzer(English)");
-        
-        // 5. ANALIZADOR KEYWORD (para búsquedas exactas)
-        System.out.println("\n5. ANALIZADOR KEYWORD (búsquedas exactas)");
-        System.out.println("=======================================");
         analizarConAnalizador(samples, new KeywordAnalyzer(), "KeywordAnalyzer");
         
-        // 6. ANALIZADOR CON LEMATIZACIÓN (Morfologik)
-        System.out.println("\n6. ANALIZADOR CON LEMATIZACIÓN (Morfologik)");
-        System.out.println("==========================================");
-        analizarConAnalizador(samples, new MorfologikAnalyzer(), "MorfologikAnalyzer");
+        // 2. STANDARD ANALYZER
+        System.out.println("\n2. STANDARD ANALYZER");
+        System.out.println("====================");
+        analizarConAnalizador(samples, new StandardAnalyzer(), "StandardAnalyzer");
         
-        // 7. ANALIZADOR PERSONALIZADO CON N-GRAMAS
-        System.out.println("\n7. ANALIZADOR PERSONALIZADO CON N-GRAMAS");
-        System.out.println("=========================================");
-        analizarConAnalizadorPersonalizado(samples);
-        
-        // 8. ANALIZADOR POR CAMPO (PerFieldAnalyzerWrapper)
-        System.out.println("\n8. ANALIZADOR POR CAMPO (PerFieldAnalyzerWrapper)");
-        System.out.println("================================================");
-        analizarConAnalizadorPorCampo(samples);
+        // 3. ENGLISH ANALYZER
+        System.out.println("\n3. ENGLISH ANALYZER");
+        System.out.println("==================");
+        analizarConAnalizador(samples, new EnglishAnalyzer(), "EnglishAnalyzer");
     }
     
     /**
-     * Analiza muestras con un analizador específico
+     * Analiza muestras con un analizador específico aplicado a AMBOS campos
      */
     private static void analizarConAnalizador(List<String[]> samples, Analyzer analyzer, String nombreAnalizador) throws IOException {
         System.out.println("Analizador: " + nombreAnalizador);
         System.out.println("Características: " + obtenerCaracteristicas(analyzer));
         
-        int totalTokens = 0;
+        int totalTokensAmenities = 0;
+        int totalTokensNeighbourhood = 0;
         int muestrasAnalizadas = 0;
         
         for (String[] sample : samples) {
@@ -181,84 +148,23 @@ public class ComparadorAnalizadores {
                     int tokensAmenities = analizarTexto(amenities, analyzer);
                     int tokensNeighbourhood = analizarTexto(hostNeighbourhood, analyzer);
                     
-                    totalTokens += tokensAmenities + tokensNeighbourhood;
+                    totalTokensAmenities += tokensAmenities;
+                    totalTokensNeighbourhood += tokensNeighbourhood;
                     muestrasAnalizadas++;
                 }
             }
         }
         
         System.out.println("Muestras analizadas: " + muestrasAnalizadas);
-        System.out.println("Total de tokens: " + totalTokens);
-        System.out.println("Promedio de tokens por muestra: " + (muestrasAnalizadas > 0 ? totalTokens / muestrasAnalizadas : 0));
+        System.out.println("--- RESULTADOS POR CAMPO ---");
+        System.out.println("Amenities - Total tokens: " + totalTokensAmenities + 
+                          " | Promedio: " + (muestrasAnalizadas > 0 ? totalTokensAmenities / muestrasAnalizadas : 0));
+        System.out.println("Host Neighbourhood - Total tokens: " + totalTokensNeighbourhood + 
+                          " | Promedio: " + (muestrasAnalizadas > 0 ? totalTokensNeighbourhood / muestrasAnalizadas : 0));
+        System.out.println("TOTAL - Tokens: " + (totalTokensAmenities + totalTokensNeighbourhood) + 
+                          " | Promedio: " + (muestrasAnalizadas > 0 ? (totalTokensAmenities + totalTokensNeighbourhood) / muestrasAnalizadas : 0));
     }
     
-    /**
-     * Analiza con analizador personalizado que incluye n-gramas
-     */
-    private static void analizarConAnalizadorPersonalizado(List<String[]> samples) throws IOException {
-        System.out.println("Analizador: Personalizado con N-gramas");
-        System.out.println("Características: StandardTokenizer + LowerCaseFilter + StopFilter + EdgeNGramFilter");
-        
-        int totalTokens = 0;
-        int muestrasAnalizadas = 0;
-        
-        for (String[] sample : samples) {
-            if (sample.length > 40) {
-                String amenities = sample[39];
-                String hostNeighbourhood = sample[21];
-                
-                if (!amenities.isEmpty() && !hostNeighbourhood.isEmpty()) {
-                    int tokensAmenities = analizarConNGramas(amenities);
-                    int tokensNeighbourhood = analizarConNGramas(hostNeighbourhood);
-                    
-                    totalTokens += tokensAmenities + tokensNeighbourhood;
-                    muestrasAnalizadas++;
-                }
-            }
-        }
-        
-        System.out.println("Muestras analizadas: " + muestrasAnalizadas);
-        System.out.println("Total de tokens: " + totalTokens);
-        System.out.println("Promedio de tokens por muestra: " + (muestrasAnalizadas > 0 ? totalTokens / muestrasAnalizadas : 0));
-    }
-    
-    /**
-     * Analiza con analizador por campo usando PerFieldAnalyzerWrapper
-     */
-    private static void analizarConAnalizadorPorCampo(List<String[]> samples) throws IOException {
-        System.out.println("Analizador: PerFieldAnalyzerWrapper");
-        System.out.println("Características: Diferentes analizadores para diferentes campos");
-        
-        // Configurar analizadores por campo
-        Map<String, Analyzer> fieldAnalyzers = new HashMap<>();
-        fieldAnalyzers.put("amenities", new EnglishAnalyzer()); // Para amenities en inglés
-        fieldAnalyzers.put("host_neighbourhood", new SimpleAnalyzer()); // Para nombres de lugares
-        
-        PerFieldAnalyzerWrapper perFieldAnalyzer = new PerFieldAnalyzerWrapper(
-            new StandardAnalyzer(), fieldAnalyzers);
-        
-        int totalTokens = 0;
-        int muestrasAnalizadas = 0;
-        
-        for (String[] sample : samples) {
-            if (sample.length > 40) {
-                String amenities = sample[39];
-                String hostNeighbourhood = sample[21];
-                
-                if (!amenities.isEmpty() && !hostNeighbourhood.isEmpty()) {
-                    int tokensAmenities = analizarTexto(amenities, perFieldAnalyzer);
-                    int tokensNeighbourhood = analizarTexto(hostNeighbourhood, perFieldAnalyzer);
-                    
-                    totalTokens += tokensAmenities + tokensNeighbourhood;
-                    muestrasAnalizadas++;
-                }
-            }
-        }
-        
-        System.out.println("Muestras analizadas: " + muestrasAnalizadas);
-        System.out.println("Total de tokens: " + totalTokens);
-        System.out.println("Promedio de tokens por muestra: " + (muestrasAnalizadas > 0 ? totalTokens / muestrasAnalizadas : 0));
-    }
     
     /**
      * Analiza un texto con un analizador específico
@@ -278,29 +184,6 @@ public class ComparadorAnalizadores {
         return count;
     }
     
-    /**
-     * Analiza texto con n-gramas personalizados
-     */
-    private static int analizarConNGramas(String texto) throws IOException {
-        StandardTokenizer tokenizer = new StandardTokenizer();
-        TokenStream tokenStream = new LowerCaseFilter(tokenizer);
-        tokenStream = new StopFilter(tokenStream, EnglishAnalyzer.getDefaultStopSet());
-        tokenStream = new EdgeNGramTokenFilter(tokenStream, 2, 6, false);
-        
-        tokenizer.setReader(new StringReader(texto));
-        
-        CharTermAttribute termAttr = tokenStream.addAttribute(CharTermAttribute.class);
-        tokenStream.reset();
-        
-        int count = 0;
-        while (tokenStream.incrementToken()) {
-            count++;
-        }
-        tokenStream.end();
-        tokenStream.close();
-        
-        return count;
-    }
     
     /**
      * Obtiene características de un analizador
@@ -308,18 +191,8 @@ public class ComparadorAnalizadores {
     private static String obtenerCaracteristicas(Analyzer analyzer) {
         if (analyzer instanceof StandardAnalyzer) {
             return "Tokenización estándar + normalización + stop words";
-        } else if (analyzer instanceof SpanishAnalyzer) {
-            return "Tokenización + stop words en español + stemming";
         } else if (analyzer instanceof EnglishAnalyzer) {
             return "Tokenización + stop words en inglés + stemming";
-        } else if (analyzer instanceof SnowballAnalyzer) {
-            return "Tokenización + stemming avanzado";
-        } else if (analyzer instanceof MorfologikAnalyzer) {
-            return "Tokenización + lematización (forma canónica)";
-        } else if (analyzer instanceof WhitespaceAnalyzer) {
-            return "Solo división por espacios";
-        } else if (analyzer instanceof SimpleAnalyzer) {
-            return "División por espacios + minúsculas";
         } else if (analyzer instanceof KeywordAnalyzer) {
             return "Texto completo como un solo token";
         }
@@ -345,11 +218,10 @@ public class ComparadorAnalizadores {
         Map<String, Long> amenitiesData = prepararDatosAmenities(samples);
         Map<String, Long> neighbourhoodData = prepararDatosNeighbourhood(samples);
         
-        // Evaluar diferentes analizadores
+        // Evaluar los 3 analizadores seleccionados
+        evaluarAnalizadorSugerencias("KeywordAnalyzer", new KeywordAnalyzer(), amenitiesData, neighbourhoodData);
         evaluarAnalizadorSugerencias("StandardAnalyzer", new StandardAnalyzer(), amenitiesData, neighbourhoodData);
         evaluarAnalizadorSugerencias("EnglishAnalyzer", new EnglishAnalyzer(), amenitiesData, neighbourhoodData);
-        evaluarAnalizadorSugerencias("SimpleAnalyzer", new SimpleAnalyzer(), amenitiesData, neighbourhoodData);
-        evaluarAnalizadorSugerencias("SnowballAnalyzer", new SnowballAnalyzer("English"), amenitiesData, neighbourhoodData);
     }
     
     /**
