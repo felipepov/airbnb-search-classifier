@@ -442,9 +442,8 @@ public class ComparadorSuggestion {
         System.out.println("\n=== Seleccionar Analizador ===");
         System.out.println("1.  StandardAnalyzer");
         System.out.println("2.  EnglishAnalyzer");
-        System.out.println("3.  Places Analyzer (StandardTokenizer + LowerCaseFilter + ASCIIFoldingFilter)");
-        System.out.println("4.  Amenities Analyzer (CustomAnalyzer con ASCIIFolding)");
-        System.out.print("Seleccione el analizador (1-4): ");
+        System.out.println("3.  Amenities Analyzer (CustomAnalyzer con ASCIIFolding)");
+        System.out.print("Seleccione el analizador (1-3): ");
         
         String analyzerChoice = scanner.nextLine().trim();
         Analyzer selectedAnalyzer;
@@ -460,18 +459,6 @@ public class ComparadorSuggestion {
                     System.out.println("Usando EnglishAnalyzer...");
                     break;
                 case "3":
-                    selectedAnalyzer = new Analyzer() {
-                        @Override
-                        protected Analyzer.TokenStreamComponents createComponents(String fieldName) {
-                            StandardTokenizer source = new StandardTokenizer();
-                            TokenStream result = new LowerCaseFilter(source);
-                            result = new ASCIIFoldingFilter(result);
-                            return new Analyzer.TokenStreamComponents(source, result);
-                        }
-                    };
-                    System.out.println("Usando Places Analyzer personalizado...");
-                    break;
-                case "4":
                     selectedAnalyzer = CustomAnalyzer.builder()
                         .withTokenizer("standard")
                         .addTokenFilter("lowercase")
