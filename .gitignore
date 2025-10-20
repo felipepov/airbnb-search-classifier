@@ -28,3 +28,5 @@ lucene*/
 
 # Por limite espacio
 listings.csv
+*.sh
+*.txt
