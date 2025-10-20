@@ -251,17 +251,14 @@ public class ComparadorSuggestion {
         // Obtener las palabras del archivo
          
         List<String> trainingLines = readFileQueries(filePath);
-        Random random = new Random();
         System.out.println("total de " + trainingLines.size() + " lineas");
 
-        // Construir el suggester con las queries, donde creamos artificialmente las frecuencias
+        // Construir el suggester con las queries, usando pesos por longitud de frase
         Map<String, Long> queries = new HashMap<>();
         for (String word : trainingLines) {
-
-            // Generar un número aleatorio entre 0 y 99
-            int numeroAleatorio = random.nextInt(100) + 1;
-
-            queries.put(word, queries.getOrDefault(word, 0L) + Long.valueOf(numeroAleatorio));
+            // Peso basado en número de palabras (longitud de frase)
+            long peso = word.split(" ").length;
+            queries.put(word, queries.getOrDefault(word, 0L) + peso);
         }
         System.out.println("total de " + queries.size() + " frases en conjunto");
 
@@ -300,17 +297,14 @@ public class ComparadorSuggestion {
                 an_index, an_query, AnalyzingSuggester.PRESERVE_SEP, 256, -1, true);
         
         List<String> trainingLines = readFileQueries(filePath);
-        Random random = new Random();
         System.out.println("total de " + trainingLines.size() + " lineas");
 
-        // Construir el suggester con las queries, donde creamos artificialmente las frecuencias
+        // Construir el suggester con las queries, usando pesos por longitud de frase
         Map<String, Long> queries = new HashMap<>();
         for (String word : trainingLines) {
-
-            // Generar un número aleatorio entre 0 y 99
-            int numeroAleatorio = random.nextInt(100) + 1;
-
-            queries.put(word, queries.getOrDefault(word, 0L) + Long.valueOf(numeroAleatorio));
+            // Peso basado en número de palabras (longitud de frase)
+            long peso = word.split(" ").length;
+            queries.put(word, queries.getOrDefault(word, 0L) + peso);
         }
         System.out.println("total de " + queries.size() + " frases en conjunto");
 
@@ -356,7 +350,9 @@ public class ComparadorSuggestion {
         Map<String, Long> queries = new HashMap<>();
 
         for (String lines : trainingQueries) {
-            queries.put(lines, queries.getOrDefault(lines, 0L) + 1);
+            // Peso basado en número de palabras (longitud de frase)
+            long peso = lines.split(" ").length;
+            queries.put(lines, queries.getOrDefault(lines, 0L) + peso);
         }
         System.out.println("total de " + trainingQueries.size() + " terminos");
 //         
