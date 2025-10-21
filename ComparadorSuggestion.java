@@ -1,5 +1,32 @@
 /*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * ====================================================================================
+ * COMPARADOR DE ANALIZADORES LUCENE PARA SISTEMA DE SUGERENCIAS
+ * ====================================================================================
+ * 
+ * Este programa compara diferentes analizadores de Apache Lucene para evaluar
+ * su efectividad en sistemas de sugerencias automáticas. Específicamente:
+ * 
+ * 1. ANALIZADORES COMPARADOS:
+ *    - StandardAnalyzer: Analizador estándar de Lucene
+ *    - EnglishAnalyzer: Optimizado para inglés con stemming
+ *    - AmenitiesAnalyzer: Analizador personalizado con ASCIIFolding
+ * 
+ * 2. ESTRATEGIAS DE SUGERENCIA:
+ *    - Prefix Suggester: Búsqueda por prefijos
+ *    - Fuzzy Suggester: Búsqueda difusa con tolerancia a errores
+ *    - Infix Suggester: Búsqueda en medio de palabras
+ *    - Next Term Suggester: Predicción del siguiente término
+ * 
+ * 3. DATOS DE PRUEBA:
+ *    - amenities.csv: Amenities de propiedades Airbnb
+ *    - host_neighbourhood.csv: Vecindarios de propiedades Airbnb
+ * 
+ * 4. MÉTRICAS DE EVALUACIÓN:
+ *    - Calidad de sugerencias por analizador
+ *    - Rendimiento por estrategia de búsqueda
+ *    - Relevancia semántica de resultados
+ * 
+ * ====================================================================================
  */
 
 import java.io.BufferedReader;
@@ -275,7 +302,7 @@ public class ComparadorSuggestion {
 
             // Leer el texto introducido por el usuario
             entrada = scanner.nextLine();
-            System.out.println("recomendaciones  "); // Display suggestions
+            System.out.println("recomendaciones para tu busqueda:  "); // Display suggestions
 
             List<Lookup.LookupResult> suggestions = suggester.lookup(entrada, 10, false, true);
             // Display suggestions
@@ -323,7 +350,7 @@ public class ComparadorSuggestion {
 
             List<Lookup.LookupResult> suggestions = suggester.lookup(entrada, false, 10);
 
-            System.out.println("recomendaciones  "); // Display suggestions
+            System.out.println("recomendaciones para tu busqueda:  "); // Display suggestions
             for (Lookup.LookupResult result : suggestions) {
                 System.out.println(result.key + " (" + result.value + ")" + result.highlightKey);
             }
@@ -415,6 +442,37 @@ public class ComparadorSuggestion {
       displayTokens(mi_analizador, texto);
     }
 
+    /*
+     * ====================================================================================
+     * MÉTODO PRINCIPAL - COMPARACIÓN DE ANALIZADORES LUCENE
+     * ====================================================================================
+     * 
+     * Este método principal ejecuta la comparación completa entre diferentes analizadores
+     * de Lucene aplicados a datos reales de Airbnb. La comparación incluye:
+     * 
+     * 1. SELECCIÓN DE DATOS:
+     *    - amenities.csv: Amenities de propiedades (wifi, parking, kitchen, etc.)
+     *    - host_neighbourhood.csv: Vecindarios de propiedades (downtown, beach, etc.)
+     * 
+     * 2. SELECCIÓN DE ANALIZADORES:
+     *    - StandardAnalyzer: Baseline de Lucene
+     *    - EnglishAnalyzer: Con stemming y stop words en inglés
+     *    - AmenitiesAnalyzer: Personalizado con ASCIIFolding para normalización
+     * 
+     * 3. ESTRATEGIAS DE SUGERENCIA EVALUADAS:
+     *    - Prefix: Búsqueda por prefijos (ej: "wifi" → "wifi router")
+     *    - Fuzzy: Búsqueda difusa (ej: "parkng" → "parking")
+     *    - Infix: Búsqueda interna (ej: "downtown" → "downtown area")
+     *    - NextTerm: Predicción siguiente término (ej: "free" → "free wifi")
+     * 
+     * 4. MÉTRICAS DE EVALUACIÓN:
+     *    - Número de sugerencias generadas
+     *    - Relevancia semántica de resultados
+     *    - Calidad de normalización (ASCIIFolding)
+     *    - Rendimiento por estrategia
+     * 
+     * ====================================================================================
+     */
     public static void main(String[] args) throws IOException {
         System.out.println("Comparador de Analizadores con Sugerencias ....");
         
@@ -460,9 +518,9 @@ public class ComparadorSuggestion {
                     break;
                 case "3":
                     selectedAnalyzer = CustomAnalyzer.builder()
-                        .withTokenizer("standard")
-                        .addTokenFilter("lowercase")
-                        .addTokenFilter("asciifolding")
+                        .withTokenizer("standard")  // Usa StandardTokenizer: divide por espacios y puntuación, ideal para texto general
+                        .addTokenFilter("lowercase")  // Convierte a minúsculas para normalizar búsquedas (ej: "WiFi" = "wifi")
+                        .addTokenFilter("asciifolding")  // Elimina acentos y caracteres especiales (ej: "café" = "cafe")
                         .build();
                     System.out.println("Usando Amenities Analyzer personalizado...");
                     break;
