@@ -36,6 +36,10 @@ import org.apache.lucene.analysis.es.SpanishAnalyzer;
 import org.apache.lucene.search.suggest.InputIterator;
 import org.apache.lucene.search.suggest.Lookup;
 
+// Java built-in imports for CSV processing
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
+
 import org.apache.lucene.search.suggest.analyzing.AnalyzingSuggester;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.ByteBuffersDirectory;
@@ -185,6 +189,80 @@ public class ComparadorSuggestion {
         return words;
     }
 
+    /**
+     * Parsea el archivo CSV de amenities y extrae amenities individuales de arrays JSON
+     * @param filePath Ruta al archivo CSV de amenities
+     * @return Mapa de amenities individuales con sus frecuencias
+     */
+    public static Map<String, Long> parseAmenitiesCSV(String filePath) {
+        Map<String, Long> amenities = new HashMap<>();
+        
+        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
+            String line;
+            boolean isFirstLine = true;
+            
+            while ((line = reader.readLine()) != null) {
+                // Saltar la línea de encabezado
+                if (isFirstLine) {
+                    isFirstLine = false;
+                    continue;
+                }
+                
+                // Parsear el array JSON de amenities de la línea CSV
+                List<String> amenitiesInLine = extractAmenitiesFromLine(line);
+                
+                // Agregar cada amenity al mapa con frecuencia
+                for (String amenity : amenitiesInLine) {
+                    if (!amenity.trim().isEmpty()) {
+                        amenities.put(amenity.trim(), amenities.getOrDefault(amenity.trim(), 0L) + 1);
+                    }
+                }
+            }
+        } catch (IOException e) {
+            System.out.println("Error leyendo archivo de amenities: " + e.getMessage());
+        }
+        
+        return amenities;
+    }
+    
+    /**
+     * Extrae amenities individuales de una línea CSV que contiene un array JSON
+     * @param line Línea CSV que contiene amenities en formato de array JSON
+     * @return Lista de amenities individuales
+     */
+    private static List<String> extractAmenitiesFromLine(String line) {
+        List<String> amenities = new ArrayList<>();
+        
+        try {
+            // Parseo simple de CSV - encontrar el contenido entre la primera y última comilla
+            // El formato de línea es: "[""amenity1"", ""amenity2"", ...]"
+            int startQuote = line.indexOf('"');
+            int lastQuote = line.lastIndexOf('"');
+            
+            if (startQuote != -1 && lastQuote != -1 && lastQuote > startQuote) {
+                String amenitiesJson = line.substring(startQuote + 1, lastQuote);
+                
+                // Extraer amenities del formato de array JSON: ["amenity1", "amenity2", ...]
+                Pattern pattern = Pattern.compile("\"([^\"]+)\"");
+                Matcher matcher = pattern.matcher(amenitiesJson);
+                
+                while (matcher.find()) {
+                    String amenity = matcher.group(1);
+                    // Limpiar el nombre del amenity
+                    amenity = amenity.replaceAll("\\\\u[0-9a-fA-F]{4}", ""); // Remover escapes unicode
+                    amenity = amenity.replaceAll("\\\\", ""); // Remover barras invertidas
+                    if (!amenity.trim().isEmpty()) {
+                        amenities.add(amenity.trim());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Error parseando línea de amenities: " + e.getMessage());
+        }
+        
+        return amenities;
+    }
+
     // Iterator que soporta pares <query,freq> 
     static class QueryFreqIterator implements InputIterator {
 
@@ -240,8 +318,18 @@ public class ComparadorSuggestion {
 
         FreeTextSuggester suggester = new FreeTextSuggester(an_index, an_query, 3, (byte) 0x20);
 
-        // Build the suggester with input queries
-        Map<String, Long> sentencias = readFileToSents(filePath);
+        // Construir el suggester con las queries de entrada
+        Map<String, Long> sentencias;
+        
+        // Verificar si estamos procesando el CSV de amenities
+        if (filePath.equals("amenities.csv")) {
+            System.out.println("Procesando amenities con parseo CSV apropiado...");
+            sentencias = parseAmenitiesCSV(filePath);
+            System.out.println("total de " + sentencias.size() + " amenities individuales");
+        } else {
+            sentencias = readFileToSents(filePath);
+        }
+        
         suggester.build(new QueryFreqIterator(sentencias));
 
         System.out.println("Created suggester, looking for suggestion...");
@@ -275,19 +363,27 @@ public class ComparadorSuggestion {
           AnalyzingInfixSuggester suggester = new AnalyzingInfixSuggester(directory, an_index, an_query,
                 3, true, false, true);
 
-        // Obtener las palabras del archivo
-         
-        List<String> trainingLines = readFileQueries(filePath);
-        System.out.println("total de " + trainingLines.size() + " lineas");
+        Map<String, Long> queries;
+        
+        // Verificar si estamos procesando el CSV de amenities
+        if (filePath.equals("amenities.csv")) {
+            System.out.println("Procesando amenities con parseo CSV apropiado...");
+            queries = parseAmenitiesCSV(filePath);
+            System.out.println("total de " + queries.size() + " amenities individuales");
+        } else {
+            // Obtener las palabras del archivo
+            List<String> trainingLines = readFileQueries(filePath);
+            System.out.println("total de " + trainingLines.size() + " lineas");
 
-        // Construir el suggester con las queries, usando pesos por longitud de frase
-        Map<String, Long> queries = new HashMap<>();
-        for (String word : trainingLines) {
-            // Peso basado en número de palabras (longitud de frase)
-            long peso = word.split(" ").length;
-            queries.put(word, queries.getOrDefault(word, 0L) + peso);
+            // Construir el suggester con las queries, usando pesos por longitud de frase
+            queries = new HashMap<>();
+            for (String word : trainingLines) {
+                // Peso basado en número de palabras (longitud de frase)
+                long peso = word.split(" ").length;
+                queries.put(word, queries.getOrDefault(word, 0L) + peso);
+            }
+            System.out.println("total de " + queries.size() + " frases en conjunto");
         }
-        System.out.println("total de " + queries.size() + " frases en conjunto");
 
         System.out.println("Creating suggester");
 
@@ -323,17 +419,26 @@ public class ComparadorSuggestion {
         AnalyzingSuggester suggester = new AnalyzingSuggester(directory, "aaa",
                 an_index, an_query, AnalyzingSuggester.PRESERVE_SEP, 256, -1, true);
         
-        List<String> trainingLines = readFileQueries(filePath);
-        System.out.println("total de " + trainingLines.size() + " lineas");
-
-        // Construir el suggester con las queries, usando pesos por longitud de frase
-        Map<String, Long> queries = new HashMap<>();
-        for (String word : trainingLines) {
-            // Peso basado en número de palabras (longitud de frase)
-            long peso = word.split(" ").length;
-            queries.put(word, queries.getOrDefault(word, 0L) + peso);
+        Map<String, Long> queries;
+        
+        // Verificar si estamos procesando el CSV de amenities
+        if (filePath.equals("amenities.csv")) {
+            System.out.println("Procesando amenities con parseo CSV apropiado...");
+            queries = parseAmenitiesCSV(filePath);
+            System.out.println("total de " + queries.size() + " amenities individuales");
+        } else {
+            List<String> trainingLines = readFileQueries(filePath);
+            System.out.println("total de " + trainingLines.size() + " lineas");
+            
+            // Construir el suggester con las queries, usando pesos por longitud de frase
+            queries = new HashMap<>();
+            for (String word : trainingLines) {
+                // Peso basado en número de palabras (longitud de frase)
+                long peso = word.split(" ").length;
+                queries.put(word, queries.getOrDefault(word, 0L) + peso);
+            }
+            System.out.println("total de " + queries.size() + " frases en conjunto");
         }
-        System.out.println("total de " + queries.size() + " frases en conjunto");
 
         System.out.println("Creating suggester");
 
@@ -352,7 +457,8 @@ public class ComparadorSuggestion {
 
             System.out.println("recomendaciones para tu busqueda:  "); // Display suggestions
             for (Lookup.LookupResult result : suggestions) {
-                System.out.println(result.key + " (" + result.value + ")" + result.highlightKey);
+                String highlight = (result.highlightKey != null) ? result.highlightKey.toString() : "";
+                System.out.println(result.key + " (" + result.value + ")" + highlight);
             }
         } while (!entrada.equals("FIN"));
         System.out.println("FIN");
@@ -370,18 +476,26 @@ public class ComparadorSuggestion {
         FuzzySuggester suggester = new FuzzySuggester(directory, "aaa", an_index,
                 an_query);
 
-        List<String> trainingQueries = readFileQueries(filePath);
-
-        System.out.println("total de " + trainingQueries.size() + " palabras");
-        // Build the suggester with input queries
-        Map<String, Long> queries = new HashMap<>();
-
-        for (String lines : trainingQueries) {
-            // Peso basado en número de palabras (longitud de frase)
-            long peso = lines.split(" ").length;
-            queries.put(lines, queries.getOrDefault(lines, 0L) + peso);
+        Map<String, Long> queries;
+        
+        // Verificar si estamos procesando el CSV de amenities
+        if (filePath.equals("amenities.csv")) {
+            System.out.println("Procesando amenities con parseo CSV apropiado...");
+            queries = parseAmenitiesCSV(filePath);
+            System.out.println("total de " + queries.size() + " amenities individuales");
+        } else {
+            List<String> trainingQueries = readFileQueries(filePath);
+            System.out.println("total de " + trainingQueries.size() + " palabras");
+            
+            // Construir el suggester con las queries de entrada
+            queries = new HashMap<>();
+            for (String lines : trainingQueries) {
+                // Peso basado en número de palabras (longitud de frase)
+                long peso = lines.split(" ").length;
+                queries.put(lines, queries.getOrDefault(lines, 0L) + peso);
+            }
+            System.out.println("total de " + trainingQueries.size() + " terminos");
         }
-        System.out.println("total de " + trainingQueries.size() + " terminos");
 //         
         System.out.println("Creating suggester");
 
