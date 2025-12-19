@@ -120,11 +120,6 @@ Instead of denormalizing host data into every property listing (which would dupl
 ### **3. Robust CSV Parsing**
 The indexer implements a custom multi-line CSV handling logic because standard parsers often fail with user-generated content containing newlines within quotes. We track `max-errors` to allow the process to finish even if a few rows are corrupt, ensuring resilience.
 
----
-
-## 👥 Authors
-Project developed for the **Information Retrieval (RI)** course, 2025 with [Emilio Guillen Alvarez](https://github.com/Emilio-GA)
-
 
 ---
 
@@ -181,5 +176,10 @@ It is recommended to consult the Javadoc for the specific version of Lucene bein
 *   **Main Documentation**: [Lucene 10.3.0 Documentation](https://lucene.apache.org/core/10_3_0/index.html)
 *   **Text Analysis**: The [Analysis Package](https://lucene.apache.org/core/10_3_0/core/org/apache/lucene/analysis/package-summary.html) is particularly important, as it handles converting input text into tokens. Lucene performs a sequence of operations on the text, such as splitting by whitespace, removing stop words, and stemming.
 *   **Demo**: [Lucene Demo](https://lucene.apache.org/core/10_3_0/demo/index.html)
+
+---
+
+## 👥 Authors
+Project developed for the **Information Retrieval (RI)** course, 2025 with [Emilio Guillen Alvarez](https://github.com/Emilio-GA)
 
 
