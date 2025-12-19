@@ -1,6 +1,6 @@
-# Airbnb Lucene Analyzer
+# Airbnb Lucene Analyzer: Search App & Classifier
 
-**Airbnb Lucene Analyzer** is a comprehensive Information Retrieval project built with **Java 21** and **Apache Lucene 10**. It demonstrates how to build a production-grade search ecosystem from scratch, featuring robust CSV indexing, relational data modeling, interactive search UI, and machine learning classification.
+**Airbnb Lucene Analyzer** is a dual-purpose Information Retrieval project built with **Java 21** and **Apache Lucene 10**. It functions as both a high-performance **Search Application** and a **Machine Learning Classifier**. It demonstrates how to build a production-grade ecosystem featuring robust CSV indexing, relational data modeling, an interactive search UI, and text classification models.
 
 The project processes the **Los Angeles Airbnb Data (June 2025)** dataset obtained from [Kaggle](https://www.kaggle.com/datasets/wafaaalayoubi/los-angeles-airbnb-data). This dataset contains public information available in the Inside Airbnb project for the city of Los Angeles, California. The data was collected on June 17, 2025, and provides a detailed view of Airbnb listings at that time. The dataset comes in a `listings.csv` file with a total of 79 columns and about 45,000 resources.
 
