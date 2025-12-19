@@ -55,6 +55,3 @@ lucene-10.3.1/
 
 # Data
 listings.csv
-
-# Local scripts if any (optional, keeping previous user preference if they want to ignore sh)
-# *.sh
