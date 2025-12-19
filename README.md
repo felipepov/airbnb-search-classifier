@@ -104,13 +104,6 @@ You can use **Luke** (Lucene Index Toolbox) or the provided Search App to query 
 *   **Boolean Logic**: `pool AND wifi NOT party`
 *   **Numeric Ranges**: `bedrooms:[2 TO 4]` (Inclusive)
 
-### ⚠️ Important Notes for specific fields
-1.  **StringFields (Neighborhood, Type)**: These are exact match only.
-    *   *Correct*: `neighbourhood_cleansed:hollywood`
-    *   *Incorrect*: `neighbourhood_cleansed:"Hollywood"`
-2.  **Price & Ratings**: Indexed as `DoublePoint`.
-    *   In **Java Code**: Fully supported for ranges (`price:[100 TO 200]`).
-    *   In **Luke**: These fields **cannot** be searched in the "Search" tab due to a GUI limitation. Use the "Documents" tab to inspect values.
 
 ---
 
@@ -132,6 +125,55 @@ The indexer implements a custom multi-line CSV handling logic because standard p
 ## 👥 Authors
 Project developed for the **Information Retrieval (RI)** course, 2025 with [Emilio Guillen Alvarez](https://github.com/Emilio-GA)
 
+
+---
+
+## 🧪 Classification Methodology & Experimental Setup
+
+The classification experiments follow a controlled and reproducible evaluation protocol:
+
+*   **Dataset split**: 70% training / 30% test using `DatasetSplitter`
+*   **Sampling**: Stratified sampling with fixed seed to preserve class proportions
+*   **Metrics**: Accuracy, Precision, Recall, and F1-score computed via `ConfusionMatrixGenerator`
+*   **Field Comparison**:
+    *   `description`: Pure unstructured text
+    *   `contents`: **MegaField** aggregating description, name, host info, neighborhood, etc.
+
+*Across tasks, the MegaField consistently improves performance except when the task requires extracting very specific numeric information from text.*
+
+## 📊 Classification Tasks & Key Findings
+
+### 1️⃣ Neighbourhood Group Classification (`neighbourhood_group_cleansed`)
+*   **Goal**: Predict one of three macro-areas: *City of Los Angeles, Other Cities, Unincorporated Areas*
+*   **Best Classifier**: ✔ `SimpleNaiveBayesClassifier`
+*   **Why it works**: Geographic classification relies on strong, independent lexical cues (street names, landmarks). Naive Bayes excels when individual terms are highly predictive.
+*   **Best Input**: **MegaField (`contents`)** - Aggregating description + host + location context enriches the geographic vocabulary.
+*   **Result**: Accuracy ≈ **0.80**, outperforming KNN.
+
+### 2️⃣ Property Type Classification (`property_type`)
+*   **Goal**: Reduce 94 property types into macro-classes: *Rental unit, Home, Guesthouse*
+*   **Best Classifier**: ✔ `KNearestFuzzyClassifier` (k=5)
+*   **Why Fuzzy KNN**: User descriptions are ambiguous (a "guesthouse" may sound like a "home"). Fuzzy KNN assigns graded membership instead of rigid voting, handling this overlap better.
+*   **Best Input**: **MegaField (`contents`)** - Contextual clues (house rules, host details) help disambiguate borderline cases.
+*   **Result**: Accuracy above **0.93**.
+
+### 3️⃣ Bedroom Count Classification (`bedrooms`)
+*   **Goal**: Predict labels: *0, 1, 2, 3, 4, 5+*
+*   **Best Classifier**: ✔ `KNearestFuzzyClassifier` (k=5)
+*   **Key Insight**: **Description beats MegaField**.
+    *   Bedroom count relies on explicit phrases ("studio", "two bedroom").
+    *   MegaFields introduce noise (prices, codes, distances). Restricting input improves signal-to-noise ratio.
+*   **Why Fuzzy KNN**: Handles class imbalance well (many 1-2 bedrooms, few 5+).
+*   **Result**: Accuracy ≈ **0.81** with improved recall for extreme classes.
+
+### 📌 Practical Takeaways
+*   **No universal winner**: Effectiveness depends on task semantics and class balance.
+*   **Naive Bayes** is ideal for broad semantic categories with strong lexical signals.
+*   **Fuzzy KNN** excels when classes overlap semantically or data is imbalanced.
+*   **Lucene Classification**: Proven to be competitive, interpretable, and easy to integrate into IR pipelines.
+
+---
+
 ## 📚 Additional Resources & Text Analysis
 
 It is recommended to consult the Javadoc for the specific version of Lucene being used (currently **10.3.0** / **10.3.1**).
@@ -139,4 +181,5 @@ It is recommended to consult the Javadoc for the specific version of Lucene bein
 *   **Main Documentation**: [Lucene 10.3.0 Documentation](https://lucene.apache.org/core/10_3_0/index.html)
 *   **Text Analysis**: The [Analysis Package](https://lucene.apache.org/core/10_3_0/core/org/apache/lucene/analysis/package-summary.html) is particularly important, as it handles converting input text into tokens. Lucene performs a sequence of operations on the text, such as splitting by whitespace, removing stop words, and stemming.
 *   **Demo**: [Lucene Demo](https://lucene.apache.org/core/10_3_0/demo/index.html)
+
 
